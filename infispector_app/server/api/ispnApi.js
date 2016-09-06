@@ -2,10 +2,83 @@ var app = require('../../app.js');
 
 var RSVP = require('rsvp');
 var infinispan = require('infinispan');
+
 // replace JSON file for generating new updated zoomable chart
 var jsonfile = require('jsonfile');
 var file = './app/assets/flare.json';
 require('es6-promise').polyfill();
+
+function findIterator(numberOfEntries, iterator) {
+    tmpIterator = iterator;
+    while ((numberOfEntries / tmpIterator) >= 10) {                    //find out count of entries of the bigest circle
+        tmpIterator = tmpIterator * 10;
+    }
+    return tmpIterator;
+}
+
+function nodeChildrenRecursive(numberOfEntries, sizeOfCircle) {
+    var tmp = numberOfEntries;
+    var iterator = 1;
+    var digitSummary = 0;
+    var countOfCircles = 0;
+    var result = [];
+
+    if (sizeOfCircle === null) {                                    //first calling this function
+        iterator = findIterator(numberOfEntries, iterator);
+    } else {
+        iterator = sizeOfCircle;
+    }
+    if (iterator === 1) {                                           //low level of recursion
+        for (entry = 0; entry < numberOfEntries; entry++) {
+            result[entry] = {"name": "a key", "size": 30};
+        }
+    } else {                                                        //when there is more than 10 entries, 100, 1000, ...
+        while (tmp !== 0) {                                         //find out value of digit summary
+           digitSummary = digitSummary + (tmp % 10);                //because digitSummary represent count of circles in actual area
+           tmp = (tmp - (tmp % 10)) / 10;
+        }
+                                        
+        //countOfCircles = Math.trunc(numberOfEntries / iterator); 
+        countOfCircles = numberOfEntries / iterator;
+        countOfCircles =  countOfCircles -  countOfCircles % 1;
+                
+        for (circle = 0; circle < countOfCircles; circle++) {       //recursive creation json format
+            result[circle] = { 
+                "name" : "c" + iterator.toString(),
+                "children" : nodeChildrenRecursive(iterator, iterator/10)
+            };
+        }
+        tmp = numberOfEntries - countOfCircles * iterator;          //rest of entries after main cycle
+        if (tmp > 0) {
+            if (digitSummary < 11) {                                //there is more than 10 circle for one area
+                var tmpIterator;
+
+                for (circle = countOfCircles; circle < digitSummary; circle++) {   //recursive creation json format
+                    if (tmp > 9) {
+                        tmpIterator = 1;
+                        iterator = findIterator(tmp, tmpIterator);
+                        
+                        result[circle] = {
+                            "name" : "c" + tmpIterator.toString(),
+                            "children" : nodeChildrenRecursive(tmpIterator, tmpIterator/10)
+                        };
+                    }
+                    else {                                          //low level of recursion
+                        result[circle] = {"name": "a key", "size": 30};
+                    }
+
+                    tmp = tmp - tmpIterator;
+                }
+            } else {                                                //there is 10 and less of circles
+                result[countOfCircles] = { 
+                    "name" : "c" + iterator.toString(),
+                    "children" : nodeChildrenRecursive(tmp, null)
+                };
+            }
+        }
+    }
+    return result;
+}
 
 function updateJsonForChart(member) {
 
@@ -27,9 +100,14 @@ function updateJsonForChart(member) {
                         // TODO: implement proper logging
                         console.log("***** getCurrentEntriesForMember: " +
                                 host + ":" + port + " currEntries= " + stats.currentNumberOfEntries);
-
-                        for (x = 0; x < stats.currentNumberOfEntries; x++) {
-                            nodeChildren[x] = {"name": "a key", "size": 30};
+                        
+                        if (stats.currentNumberOfEntries < 10) {
+                            for (x = 0; x < stats.currentNumberOfEntries; x++) {
+                                nodeChildren[x] = {"name": "a key", "size": 30};
+                            }
+                        } else {
+                            nodeChildren = nodeChildrenRecursive(stats.currentNumberOfEntries, null);
+                            console.log("***** k sakruuuuuu after");
                         }
 
                         if (stats.currentNumberOfEntries === 0) {

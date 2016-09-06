@@ -9,6 +9,7 @@ var file = './app/assets/flare.json';
 require('es6-promise').polyfill();
 
 function findIterator(numberOfEntries, iterator) {
+    var tmpIterator;
     tmpIterator = iterator;
     while ((numberOfEntries / tmpIterator) >= 10) {                    //find out count of entries of the bigest circle
         tmpIterator = tmpIterator * 10;
@@ -19,6 +20,7 @@ function findIterator(numberOfEntries, iterator) {
 function nodeChildrenRecursive(numberOfEntries, sizeOfCircle) {
     var tmp = numberOfEntries;
     var iterator = 1;
+    var tmpIterator;
     var digitSummary = 0;
     var countOfCircles = 0;
     var result = [];
@@ -43,20 +45,23 @@ function nodeChildrenRecursive(numberOfEntries, sizeOfCircle) {
         countOfCircles =  countOfCircles -  countOfCircles % 1;
                 
         for (circle = 0; circle < countOfCircles; circle++) {       //recursive creation json format
-            result[circle] = { 
+            var c = circle;
+            result[circle] = {
                 "name" : "c" + iterator.toString(),
                 "children" : nodeChildrenRecursive(iterator, iterator/10)
             };
+            circle = c;
         }
         tmp = numberOfEntries - countOfCircles * iterator;          //rest of entries after main cycle
         if (tmp > 0) {
             if (digitSummary < 11) {                                //there is more than 10 circle for one area
-                var tmpIterator;
 
                 for (circle = countOfCircles; circle < digitSummary; circle++) {   //recursive creation json format
+                    var c = circle;
+                    tmpIterator = 1;
+                    
                     if (tmp > 9) {
-                        tmpIterator = 1;
-                        iterator = findIterator(tmp, tmpIterator);
+                        tmpIterator = findIterator(tmp, 1);
                         
                         result[circle] = {
                             "name" : "c" + tmpIterator.toString(),
@@ -66,7 +71,8 @@ function nodeChildrenRecursive(numberOfEntries, sizeOfCircle) {
                     else {                                          //low level of recursion
                         result[circle] = {"name": "a key", "size": 30};
                     }
-
+                    
+                    circle = c;
                     tmp = tmp - tmpIterator;
                 }
             } else {                                                //there is 10 and less of circles
@@ -107,7 +113,6 @@ function updateJsonForChart(member) {
                             }
                         } else {
                             nodeChildren = nodeChildrenRecursive(stats.currentNumberOfEntries, null);
-                            console.log("***** k sakruuuuuu after");
                         }
 
                         if (stats.currentNumberOfEntries === 0) {
